@@ -1,7 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import { createHTTPServer, Tool } from "@modelcontextprotocol/sdk/http";
 
-// Use the environment variable you set in Vercel/GitHub
 const GITHUB_TOKEN = process.env.MY_GITHUB_TOKEN || "";
 
 /**
@@ -95,11 +94,10 @@ const listTreeTool: Tool = {
  * Expose MCP over HTTP/SSE at /api/mcp
  */
 export const config = {
-  runtime: "nodejs18.x" // ensure proper Vercel runtime
+  runtime: "nodejs" // ✅ Fixed: correct runtime for Vercel
 };
 
 export default createHTTPServer({
   endpoint: "/api/mcp",
   tools: [readFileTool, listTreeTool]
 });
-
