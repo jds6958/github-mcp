@@ -1,5 +1,5 @@
 import { Octokit } from "@octokit/rest";
-import { createHTTPServer, Tool } from "@modelcontextprotocol/sdk-node/http";
+import { createHTTPServer, Tool } from "@modelcontextprotocol/sdk/http";
 
 const GITHUB_TOKEN = process.env.MY_GITHUB_TOKEN || "";
 
