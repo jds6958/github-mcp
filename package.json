@@ -5,7 +5,7 @@
   "type": "module",
   "engines": { "node": ">=18" },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "latest",
-    "@octokit/rest": "latest"
+    "@octokit/rest": "latest",
+    "@modelcontextprotocol/sdk": "latest"
   }
 }
