@@ -14,7 +14,7 @@ function gh() {
 // ---- Tool: github.readFile ----
 const readFileTool: Tool = {
   name: "github.readFile",
-  description: "Read a UTF-8 text file from GitHub (private repos supported).",
+  description: "Read a UTF-8 text file from GitHub (supports private repos).",
   inputSchema: {
     type: "object",
     required: ["owner", "repo", "path"],
@@ -31,7 +31,7 @@ const readFileTool: Tool = {
     try {
       const res = await octo.repos.getContent({ owner, repo, path, ref });
       if (!Array.isArray(res.data) && "content" in res.data) {
-        const buf = Buffer.from((res.data as any).content || "", "base64");
+        const buf = Buffer.from((res.data as any). content || "", "base64");
         return { ok: true, result: { text: buf.toString("utf8") } };
       }
       return { ok: false, error: "Path is a directory or not readable." };
