@@ -6,6 +6,6 @@
   "engines": { "node": ">=18" },
   "dependencies": {
     "@octokit/rest": "latest",
-    "@modelcontextprotocol/sdk": "github:modelcontextprotocol/sdk"
+    "@modelcontextprotocol/sdk": "git+https://github.com/modelcontextprotocol/sdk.git#main"
   }
 }
