@@ -5,7 +5,7 @@
   "type": "module",
   "engines": { "node": ">=18" },
   "dependencies": {
-    "@octokit/rest": "latest",
-    "@modelcontextprotocol/sdk": "https://github.com/modelcontextprotocol/sdk/archive/refs/heads/main.tar.gz"
+    "@octokit/rest": "^20.0.0",
+    "@modelcontextprotocol/sdk": "^1.18.0"
   }
 }
