@@ -3,11 +3,11 @@ import { createHTTPServer, Tool } from "@modelcontextprotocol/sdk/http";
 
 export const config = { runtime: "nodejs" };
 
-const TOKEN = process.env.MY_GITHUB_TOKEN || "";
+const TOKEN = process.env.MY_GITHUB_TOKEN || process.env.GITHUB_TOKEN || "";
 
 // Build an authenticated Octokit client
 function gh() {
-  if (!TOKEN) throw new Error("MY_GITHUB_TOKEN environment variable is not set");
+  if (!TOKEN) throw new Error("Missing GitHub token: set MY_GITHUB_TOKEN (or GITHUB_TOKEN) in Vercel → Project → Settings → Environment Variables for both Preview + Production.");
   return new Octokit({ auth: TOKEN });
 }
 
@@ -72,7 +72,7 @@ const listTreeTool: Tool = {
   }
 };
 
-// Expose MCP over HTTP/SSE
+// Expose MCP over HTTP/SSE at /api/mcp
 export default createHTTPServer({
   endpoint: "/api/mcp",
   tools: [readFileTool, listTreeTool]
