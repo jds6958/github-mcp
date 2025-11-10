@@ -6,6 +6,6 @@
   "engines": { "node": ">=18" },
   "dependencies": {
     "@octokit/rest": "latest",
-    "@modelcontextprotocol/sdk": "latest"
+    "@modelcontextprotocol/sdk-node": "latest"
   }
 }
