@@ -53,4 +53,22 @@ server.registerTool(
     const res = await gh().repos.getContent({ owner, repo, path, ref });
     if (Array.isArray(res.data)) {
       const lines = res.data.map(it => `${it.type} • ${it.path}`).format?.() || res.data.map(it=>`${it.type} • ${it.path}`).join('\n');
-      return { content: [{ type]()
+      return { content: [{ type: 'text', text: lines || '(empty)' }] };
+    }
+    return { content: [{ type: 'text', text: `file • ${res.data.path}` }] };
+  }
+);
+
+export default async function handler(req, res) {
+  const transport = new StreamableHTTPServerResponse ? new StreamableHTTPServerResponse() : new (require('@modelcontextprotocol/sdk/dist/server/streamableHttp').StreamableHTTPServerTransport)();
+  res.on?.('close', () => { try { transport.close(); } catch {} });
+  await server.connect(transport);
+
+  let payload;
+  if (req.method === 'POST') {
+    let raw = '';
+    for await (const chunk of req) raw += chunk;
+    try { payload = raw ? JSON.parse(raw) : undefined; } catch {}
+  }
+  await transport.handleRequest(req, res, payload);
+}
