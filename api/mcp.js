@@ -1,74 +1,79 @@
-// api/mcp.js  (ESM, no TypeScript)
+// api/mcp.js — ESM, Node.js 22 serverless handler exposing an MCP HTTP/SSE endpoint
+
 import { Octokit } from '@octokit/rest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
+// Vercel injects env at build/run; use a non-reserved name for GitHub PAT
+const TOKEN = process.env.MY_GITHUB_TOKEN || process.env.GITHUB_TOKEN || '';
+if (!TOKEN) {
+  throw new Error('Missing GitHub token env (set MY_GITHUB_TOKEN or GITHUB_TOKEN in Vercel → Project → Settings → Environment Variables, then redeploy).');
+}
+
 export const config = { runtime: 'nodejs' };
 
-const TOKEN = process.env.MY_GITHUB_TOKEN || process.env.GITHUB_TOKEN || '';
+// ---- GitHub client helper
 function gh() {
-  if (!TOKEN) throw new Error('Missing GitHub token (MY_GITHUB_TOKEN or GITHUB_TOKEN)');
   return new Octokit({ auth: TOKEN });
 }
 
-const server = new McpServer({ name: 'github-mcp', version: '1.0.0' });
+// ---- Build MCP server and register tools
+function buildServer() {
+  const server = new McpServer({ name: 'github-mcp', version: '1.0.0' });
 
-server.registerTool(
-  'github.readFile',
-  {
-    title: 'Read file from GitHub',
-    description: 'Read a UTF-8 text file from a GitHub repo',
-    inputSchema: {
-      type: 'object',
-      required: ['owner','repo','path'],
-      properties: {
-        owner:{type:'string'}, repo:{type:'string'}, path:{type:'string'},
-        ref:{type:'string'}
+  // Read a UTF-8 file from a repo
+  server.registerTool(
+    'github.readFile',
+    {
+      description: 'Read a UTF-8 text file from a GitHub repo',
+      inputSchema: {
+        type: 'object',
+        required: ['owner', 'repo', 'path'],
+        properties: {
+          owner: { type: 'string' },
+          repo:  { type: 'string' },
+          path:  { type: 'string' },
+          ref:   { type: 'string' }
+        }
       }
-    }
-  },
-  async ({ owner, repo, path, ref }) => {
-    const res = await gh().repos.getContent({ owner, repo, path, ref });
-    if (Array.isArray(res.data)) return { content:[{type:'text', text:'Path is a directory.'}] };
-    const buf = Buffer.from(res.data.content || '', 'base64');
-    return { content:[{ type:'text', text: buf.toString('utf8') }] };
-  }
-);
-
-server.registerTool(
-  'github.listTree',
-  {
-    title: 'List files at path',
-    description: 'List files/folders at a path in a GitHub repo',
-    inputSchema: {
-      type: 'object',
-      required: ['owner','repo'],
-      properties: {
-        owner:{type:'string'}, repo:{type:'string'},
-        path:{type:'string'},  ref:{type:'string'}
+    },
+    async ({ owner, repo, path, ref }) => {
+      const res = await gh().repos.getContent({ owner, repo, path, ref });
+      if (Array.isArray(res.data)) {
+        return { content: [{ type: 'text', text: 'Path is a directory.' }] };
       }
+      const buf = Buffer.from(res.data.content || '', 'base64');
+      return { content: [{ type: 'text', text: buf.toString('utf8') }] };
     }
-  },
-  async ({ owner, repo, path = '', ref }) => {
-    const res = await gh().repos.getContent({ owner, repo, path, ref });
-    if (Array.isArray(res.data)) {
-      const lines = res.data.map(it => `${it.type} • ${it.path}`).format?.() || res.data.map(it=>`${it.type} • ${it.path}`).join('\n');
-      return { content: [{ type: 'text', text: lines || '(empty)' }] };
+  );
+
+  // List files/folders at a path
+  server.registerTool(
+    'github.listTree',
+    {
+      description: 'List files/folders at a path in a GitHub repo',
+      inputSchema: {
+        type: 'object',
+        required: ['owner', 'repo'],
+        properties: {
+          owner: { type: 'string' },
+          repo:  { type: 'string' },
+          path:  { type: 'string' },
+          ref:   { type: 'string' }
+        }
+      }
+    },
+    async ({ owner, repo, path = '', ref }) => {
+      const res = await gh().repos.getContent({ owner, repo, path, ref });
+      if (Array.isArray(res.data)) {
+        const items = res.data.map((it) => ({
+          type: it.type,
+          name: it.name,
+          path: it.path,
+          size: typeof it.size === 'number' ? it.size : null
+        }));
+        return { content: [{ type: 'json', json: items }] };
+      }
+      const d = res.data;
+      return { content: [{ type: 'json', json: [{ type: 'file', name: d.name, path: d.path, size: d.size ?? null }] }] };
     }
-    return { content: [{ type: 'text', text: `file • ${res.data.path}` }] };
-  }
-);
-
-export default async function handler(req, res) {
-  const transport = new StreamableHTTPServerResponse ? new StreamableHTTPServerResponse() : new (require('@modelcontextprotocol/sdk/dist/server/streamableHttp').StreamableHTTPServerTransport)();
-  res.on?.('close', () => { try { transport.close(); } catch {} });
-  await server.connect(transport);
-
-  let payload;
-  if (req.method === 'POST') {
-    let raw = '';
-    for await (const chunk of req) raw += chunk;
-    try { payload = raw ? JSON.parse(raw) : undefined; } catch {}
-  }
-  await transport.handleRequest(req, res, payload);
-}
